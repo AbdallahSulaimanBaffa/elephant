@@ -1,0 +1,11 @@
+# yt-dlp download toggles — one per line, key = true/false
+embed_chapters=true
+embed_metadata=true
+embed_thumbnail=true
+embed_subs=false
+
+# folder(s) the watcher scans for finished downloads (blank = auto ~Downloads)
+watch_folder=
+
+# ffmpeg binary (bundled path can go here, e.g. plugin/ffmpeg/ffmpeg.exe)
+ffmpeg=ffmpeg

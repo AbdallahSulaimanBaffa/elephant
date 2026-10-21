@@ -1,3 +1,8 @@
+// Feature toggles (flip these to experiment locally; rebuild elephant.fda after changing).
+var EMBED_AUTO_CAPTIONS = true;   // merge yt-dlp automatic_captions into subtitles (tagged "(auto)")
+var PASS_EXTRA_PROPERTIES = true;  // pass rich YouTube metadata (description, channel, tags, chapters, ...) through
+var INCLUDE_CHAPTERS = true;      // include the chapters array in the parse result
+
 var g_browsers = Object.create(null);
 
 var msAbstractParser = (function()
@@ -86,7 +91,7 @@ var msAbstractParser = (function()
 
             let sourceName = /^https?:\/\/(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|youtube-nocookie\.com)(?::\d+)?(?:[/?#]|$)/i.test(obj.url) ? "YouTube" : "Web site";
 
-            return launchPythonScript(obj.requestId, obj.interactive, "yt-dlp/yt_dlp/__main__.py", args)
+            return launchPythonScript(obj.requestId, obj.interactive, "yt-dlp/elephant_launcher.py", args)
             .then(function(obj)
             {
                 logPythonResult(obj);
@@ -116,7 +121,7 @@ var msAbstractParser = (function()
                         // FDM reads the "subtitles" field of yt-dlp's info JSON; auto-generated
                         // captions live under "automatic_captions", so merge them in (without
                         // clobbering any manual subtitle track for the same language).
-                        if (parsed && parsed.automatic_captions)
+                        if (EMBED_AUTO_CAPTIONS && parsed && parsed.automatic_captions)
                         {
                             if (!parsed.subtitles || typeof parsed.subtitles !== "object")
                                 parsed.subtitles = {};
@@ -141,7 +146,7 @@ var msAbstractParser = (function()
                         }
 
                         // Same treatment for playlist entries.
-                        if (parsed && Array.isArray(parsed.entries))
+                        if (EMBED_AUTO_CAPTIONS && parsed && Array.isArray(parsed.entries))
                         {
                             for (let i = 0; i < parsed.entries.length; ++i)
                             {
@@ -168,6 +173,59 @@ var msAbstractParser = (function()
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        // Pass rich YouTube metadata through as a "properties" object so FDM's
+                        // Properties dialog (and any future field) can display it. Also keep
+                        // the chapters array when enabled. These are best-effort: FDM only
+                        // reads fields it knows, but extra keys never hurt.
+                        if (parsed && PASS_EXTRA_PROPERTIES)
+                        {
+                            const extraKeys = ["description", "channel", "channel_id", "uploader",
+                                "uploader_id", "uploader_url", "tags", "categories", "view_count",
+                                "like_count", "comment_count", "age_limit", "duration_string",
+                                "upload_date", "webpage_url", "original_url", "extractor",
+                                "extractor_key", "release_year", "availability", "creators",
+                                "creator", "channel_follower_count"];
+                            const props = {};
+                            for (let k = 0; k < extraKeys.length; ++k)
+                            {
+                                const key = extraKeys[k];
+                                if (parsed[key] !== undefined && parsed[key] !== null)
+                                    props[key] = parsed[key];
+                            }
+                            if (INCLUDE_CHAPTERS && Array.isArray(parsed.chapters) && parsed.chapters.length)
+                                props.chapters = parsed.chapters;
+                            if (Object.keys(props).length)
+                                parsed.properties = props;
+                        }
+
+                        if (parsed && !INCLUDE_CHAPTERS)
+                            delete parsed.chapters;
+
+                        if (parsed && Array.isArray(parsed.entries))
+                        {
+                            for (let i = 0; i < parsed.entries.length; ++i)
+                            {
+                                const e = parsed.entries[i];
+                                if (!e || !PASS_EXTRA_PROPERTIES) continue;
+                                const eprops = {};
+                                const ekeys = ["description", "channel", "uploader", "tags",
+                                    "categories", "view_count", "like_count", "duration_string",
+                                    "upload_date", "webpage_url"];
+                                for (let k = 0; k < ekeys.length; ++k)
+                                {
+                                    const key = ekeys[k];
+                                    if (e[key] !== undefined && e[key] !== null)
+                                        eprops[key] = e[key];
+                                }
+                                if (INCLUDE_CHAPTERS && Array.isArray(e.chapters) && e.chapters.length)
+                                    eprops.chapters = e.chapters;
+                                if (Object.keys(eprops).length)
+                                    e.properties = eprops;
+                                if (!INCLUDE_CHAPTERS)
+                                    delete e.chapters;
                             }
                         }
 

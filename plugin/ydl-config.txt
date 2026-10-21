@@ -1,0 +1,19 @@
+# Elephant toggles — key = true/false. Re-read live, no reinstall needed.
+embed_chapters=true
+embed_metadata=true
+embed_thumbnail=true
+embed_subs=true
+
+# desktop notification when a file's extras have been added
+notify=true
+
+# subtitles: comma-separated languages (or "all" for every manual track);
+# auto_subs=true falls back to YouTube auto-captions when no manual track exists
+sub_langs=en
+auto_subs=true
+
+# extra folder(s) to watch, comma-separated (~/Downloads is always watched)
+watch_folder=/home/abdallahsb/Downloads
+
+# ffmpeg binary (FDM's Flatpak runtime ships one at /usr/bin/ffmpeg)
+ffmpeg=ffmpeg
